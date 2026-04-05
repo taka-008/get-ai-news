@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.display_name }} 最新情報 | AI News Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- 企業ヘッダー -->
+        <div class="company-header mb-4 p-4 rounded-3"
+             style="background: linear-gradient(135deg, {{ company.color }}22, {{ company.color }}11); border-left: 4px solid {{ company.color }};">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <h2 class="mb-1" style="color: {{ company.color }}">
+                        {{ company.icon }} {{ company.display_name }}
+                    </h2>
+                    <small class="text-muted" id="news-meta">読み込み中...</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshNews()" id="refresh-btn">
+                        <i class="bi bi-arrow-clockwise me-1"></i>最新情報を取得
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ローディング -->
+        <div id="loading" class="text-center py-5">
+            <div class="spinner-border" role="status" style="color: {{ company.color }}">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">
+                <i class="bi bi-robot me-1"></i>{{ company.display_name }}の情報を分析中...
+            </p>
+        </div>
+
+        <!-- エラー -->
+        <div id="error-msg" class="alert alert-danger d-none" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <span id="error-text"></span>
+        </div>
+
+        <!-- ニュースコンテンツ -->
+        <div id="news-container" class="d-none">
+            <div id="news-groups" class="row g-3"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const COMPANY_KEY = '{{ company_key }}';
+const COMPANY_COLOR = '{{ company.color }}';
+
+const importanceBadge = {
+    'high': '<span class="badge bg-danger">重要</span>',
+    'medium': '<span class="badge bg-warning text-dark">注目</span>',
+    'low': '<span class="badge bg-secondary">一般</span>',
+};
+
+function getCategoryBadge(category) {
+    return `<span class="badge bg-light text-dark border">${category}</span>`;
+}
+
+function renderNewsGroups(groups) {
+    const container = document.getElementById('news-groups');
+    container.innerHTML = '';
+
+    if (groups.length === 0) {
+        container.innerHTML = `
+        <div class="col-12 text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1"></i>
+            <p class="mt-2">現在ニュースがありません</p>
+        </div>`;
+        return;
+    }
+
+    groups.forEach((group, index) => {
+        const rankNum = group.rank || (index + 1);
+        const articles = group.articles || [];
+
+        const articleLinks = articles.slice(0, 5).map(a =>
+            `<a href="${a.url}" target="_blank" rel="noopener" class="article-link">
+                <i class="bi bi-link-45deg"></i>
+                <span class="article-source">${a.source}:</span> ${a.title.substring(0, 70)}${a.title.length > 70 ? '...' : ''}
+            </a>`
+        ).join('');
+
+        const moreCount = articles.length > 5 ? articles.length - 5 : 0;
+        const isTop = rankNum <= 3;
+
+        container.innerHTML += `
+        <div class="col-12 ${isTop ? '' : 'col-md-6'}">
+            <div class="card news-card h-100 ${isTop ? 'company-top-card' : ''}"
+                 style="${isTop ? `border-left: 4px solid ${COMPANY_COLOR}` : ''}">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <span class="rank-badge rank-${rankNum <= 3 ? rankNum : 'default'}">#${rankNum}</span>
+                        <div class="flex-grow-1">
+                            <div class="d-flex flex-wrap gap-1 mb-1">
+                                ${importanceBadge[group.importance] || ''}
+                                ${getCategoryBadge(group.category || 'ニュース')}
+                            </div>
+                            <h6 class="card-title mb-0 ${isTop ? 'fs-5' : ''}">${group.topic}</h6>
+                        </div>
+                    </div>
+                    <p class="card-text text-muted ${isTop ? '' : 'small'} mb-2">${group.summary}</p>
+                    <div class="article-links">
+                        ${articleLinks}
+                        ${moreCount > 0 ? `<span class="text-muted small">他 ${moreCount} 件</span>` : ''}
+                    </div>
+                </div>
+                <div class="card-footer text-muted small d-flex justify-content-between">
+                    <span><i class="bi bi-files me-1"></i>${articles.length} 件の関連記事</span>
+                    ${articles[0]?.published ?
+                        `<span><i class="bi bi-clock me-1"></i>${new Date(articles[0].published).toLocaleDateString('ja-JP')}</span>`
+                        : ''}
+                </div>
+            </div>
+        </div>`;
+    });
+}
+
+async function loadNews(forceRefresh = false) {
+    document.getElementById('loading').classList.remove('d-none');
+    document.getElementById('news-container').classList.add('d-none');
+    document.getElementById('error-msg').classList.add('d-none');
+
+    if (forceRefresh) {
+        await fetch(`/api/refresh/${COMPANY_KEY}`);
+    }
+
+    try {
+        const response = await fetch(`/api/news/company/${COMPANY_KEY}`);
+        const json = await response.json();
+
+        if (!json.success) throw new Error(json.error || '不明なエラー');
+
+        const data = json.data;
+        document.getElementById('news-meta').textContent =
+            `${data.total_articles}件の記事を分析 | 更新: ${new Date(data.updated_at).toLocaleString('ja-JP')}`;
+
+        renderNewsGroups(data.groups);
+
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('news-container').classList.remove('d-none');
+    } catch (e) {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('error-msg').classList.remove('d-none');
+        document.getElementById('error-text').textContent = e.message;
+    }
+}
+
+function refreshNews() {
+    const btn = document.getElementById('refresh-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>取得中...';
+    loadNews(true).finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>最新情報を取得';
+    });
+}
+
+loadNews();
+</script>
+{% endblock %}
