@@ -72,18 +72,31 @@ COMPANY_FEEDS = {
         "search_query": "Google Gemini DeepMind AI",
         "google_news_url": "https://news.google.com/rss/search?q=Google+Gemini+DeepMind+AI&hl=ja&gl=JP&ceid=JP:ja",
     },
-    "microsoft": {
-        "display_name": "Microsoft",
+    "copilot": {
+        "display_name": "Microsoft Copilot",
         "color": "#00a4ef",
-        "icon": "💻",
+        "icon": "🪁",
         "feeds": [
             {
-                "name": "Microsoft AI Blog",
-                "url": "https://blogs.microsoft.com/ai/feed/",
+                "name": "Microsoft Tech Community - Copilot",
+                "url": "https://techcommunity.microsoft.com/t5/microsoft-copilot-blog/bg-p/MicrosoftCopilotBlog/rss",
             },
         ],
-        "search_query": "Microsoft Copilot Azure AI",
-        "google_news_url": "https://news.google.com/rss/search?q=Microsoft+Copilot+Azure+AI&hl=ja&gl=JP&ceid=JP:ja",
+        "search_query": "Microsoft Copilot AI",
+        "google_news_url": "https://news.google.com/rss/search?q=Microsoft+Copilot&hl=ja&gl=JP&ceid=JP:ja",
+    },
+    "fabric": {
+        "display_name": "Microsoft Fabric",
+        "color": "#742774",
+        "icon": "🔷",
+        "feeds": [
+            {
+                "name": "Microsoft Fabric Blog",
+                "url": "https://blog.fabric.microsoft.com/en-US/feed/",
+            },
+        ],
+        "search_query": "Microsoft Fabric データ分析",
+        "google_news_url": "https://news.google.com/rss/search?q=Microsoft+Fabric&hl=ja&gl=JP&ceid=JP:ja",
     },
     "amazon": {
         "display_name": "Amazon",
